@@ -1,5 +1,5 @@
 // Ficheiro: lib/models/device.dart
-// DESCRIÇÃO: Adicionada a variável totemType que vem do servidor.
+// DESCRIÇÃO: Adicionadas as variáveis ram, hdType e hdStorage que vêm do servidor.
 
 class Device {
   final String id;
@@ -14,7 +14,11 @@ class Device {
   final DateTime lastSeen;
   final String status;
   final String biometricReaderStatus;
-  final String totemType; // NOVA VARIÁVEL ADICIONADA
+  final String totemType;
+  final String ram; // NOVO
+  final String hdType; // NOVO
+  final String hdStorage; // NOVO
+
 
   Device({
     required this.id,
@@ -29,7 +33,10 @@ class Device {
     required this.lastSeen,
     required this.status,
     required this.biometricReaderStatus,
-    required this.totemType, // NOVA VARIÁVEL ADICIONADA
+    required this.totemType,
+    required this.ram, // NOVO
+    required this.hdType, // NOVO
+    required this.hdStorage, // NOVO
   });
 
   factory Device.fromJson(Map<String, dynamic> json) {
@@ -50,7 +57,10 @@ class Device {
       lastSeen: parsedDate.toLocal(),
       status: json['status'] ?? 'Offline',
       biometricReaderStatus: json['biometricReaderStatus'] ?? 'N/A',
-      totemType: json['totemType'] ?? 'N/A', // NOVA VARIÁVEL COM FALLBACK
+      totemType: json['totemType'] ?? 'N/A',
+      ram: json['ram'] ?? 'N/A', // NOVO
+      hdType: json['hdType'] ?? 'N/A', // NOVO
+      hdStorage: json['hdStorage'] ?? 'N/A', // NOVO
     );
   }
 
