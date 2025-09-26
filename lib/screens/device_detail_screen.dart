@@ -1,5 +1,5 @@
 // Ficheiro: lib/screens/device_detail_screen.dart
-// DESCRIÇÃO: Ecrã que mostra todas as informações de um único dispositivo.
+// DESCRIÇÃO: Adicionado o campo "Tipo de Totem" na tela de detalhes do dispositivo.
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -30,6 +30,7 @@ class DeviceDetailScreen extends StatelessWidget {
                 _InfoTile(label: 'Hostname', value: device.hostname),
                 _InfoTile(label: 'Unidade / Localização', value: device.location),
                 _InfoTile(label: 'Endereço IP', value: device.id),
+                _InfoTile(label: 'Tipo de Totem', value: device.totemType), // NOVO CAMPO ADICIONADO
                 _InfoTile(label: 'Modelo', value: device.model),
                 _InfoTile(label: 'Número de Série', value: device.serialNumber),
                 _InfoTile(label: 'Service Tag', value: device.serviceTag),
@@ -130,4 +131,3 @@ class _InfoTile extends StatelessWidget {
     );
   }
 }
-

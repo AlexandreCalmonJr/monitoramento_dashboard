@@ -1,5 +1,5 @@
 // Ficheiro: lib/models/device.dart
-// DESCRIÇÃO: Corrigido o problema de fuso horário ao converter a data 'lastSeen' para a hora local.
+// DESCRIÇÃO: Adicionada a variável totemType que vem do servidor.
 
 class Device {
   final String id;
@@ -14,6 +14,7 @@ class Device {
   final DateTime lastSeen;
   final String status;
   final String biometricReaderStatus;
+  final String totemType; // NOVA VARIÁVEL ADICIONADA
 
   Device({
     required this.id,
@@ -28,6 +29,7 @@ class Device {
     required this.lastSeen,
     required this.status,
     required this.biometricReaderStatus,
+    required this.totemType, // NOVA VARIÁVEL ADICIONADA
   });
 
   factory Device.fromJson(Map<String, dynamic> json) {
@@ -48,6 +50,7 @@ class Device {
       lastSeen: parsedDate.toLocal(),
       status: json['status'] ?? 'Offline',
       biometricReaderStatus: json['biometricReaderStatus'] ?? 'N/A',
+      totemType: json['totemType'] ?? 'N/A', // NOVA VARIÁVEL COM FALLBACK
     );
   }
 
@@ -116,4 +119,3 @@ class Device {
   // Getter para o status da impressora Bematech
   String get bematechStatus => _getPrinterStatusByName('bematech');
 }
-

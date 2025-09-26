@@ -1,5 +1,5 @@
 // Ficheiro: lib/screens/device_list_screen.dart
-// DESCRIÇÃO: Corrigido o layout da tabela e adicionada a coluna de Leitor Biométrico.
+// DESCRIÇÃO: Adicionada a coluna "Tipo de Totem" na tabela de dispositivos.
 
 import 'dart:async';
 
@@ -199,6 +199,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                         DataColumn(label: Text('Dispositivo', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('Unidade', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('IP', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Tipo de Totem', style: TextStyle(fontWeight: FontWeight.bold))), // NOVA COLUNA
                         DataColumn(label: Text('Zebra', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('Bematech', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('Leitor Biométrico', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -213,6 +214,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                             DataCell(Text(device.hostname)),
                             DataCell(Text(device.location)),
                             DataCell(Text(device.ip)),
+                            DataCell(Text(device.totemType)), // NOVA CÉLULA COM O TIPO DE TOTEM
                             DataCell(Text(device.zebraStatus)),
                             DataCell(Text(device.bematechStatus)),
                             DataCell(Text(device.biometricReaderStatus)),
@@ -289,4 +291,3 @@ class _SummaryCard extends StatelessWidget {
     );
   }
 }
-
