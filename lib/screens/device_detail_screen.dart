@@ -1,5 +1,5 @@
 // Ficheiro: lib/screens/device_detail_screen.dart
-// DESCRIÇÃO: Adicionados os campos de RAM, Tipo de HD e Armazenamento na tela.
+// DESCRIÇÃO: Atualizado para mostrar status individual de Zebra e Bematech
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -34,32 +34,96 @@ class DeviceDetailScreen extends StatelessWidget {
                 _InfoTile(label: 'Modelo', value: device.model),
                 _InfoTile(label: 'Número de Série', value: device.serialNumber),
                 _InfoTile(label: 'Service Tag', value: device.serviceTag),
-                _InfoTile(label: 'Memória RAM', value: device.ram), // NOVO CAMPO
-                _InfoTile(label: 'Tipo de Armazenamento', value: device.hdType), // NOVO CAMPO
-                _InfoTile(label: 'Espaço em Disco', value: device.hdStorage), // NOVO CAMPO
+                _InfoTile(label: 'Memória RAM', value: device.ram),
+                _InfoTile(label: 'Tipo de Armazenamento', value: device.hdType),
+                _InfoTile(label: 'Espaço em Disco', value: device.hdStorage),
                 _InfoTile(label: 'Última Sincronização', value: DateFormat('dd/MM/yyyy HH:mm:ss').format(device.lastSeen)),
               ],
             ),
             const SizedBox(height: 16),
             _buildInfoCard(
               context,
-              title: 'Status da Impressora',
-              icon: Icons.print,
+              title: 'Status dos Dispositivos',
+              icon: Icons.devices,
               children: [
-                _InfoTile(label: 'Detalhes', value: device.printerStatus),
+                _InfoTile(
+                  label: 'Impressora Zebra',
+                  valueWidget: _buildDeviceStatusChip(device.zebraStatus),
+                ),
+                _InfoTile(
+                  label: 'Impressora Bematech',
+                  valueWidget: _buildDeviceStatusChip(device.bematechStatus),
+                ),
+                _InfoTile(
+                  label: 'Leitor Biométrico',
+                  valueWidget: _buildDeviceStatusChip(device.biometricReaderStatus),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildInfoCard(
+              context,
+              title: 'Software Instalado',
+              icon: Icons.apps,
+              children: [
+                _InfoTile(label: 'Mozilla Firefox', value: 'Versão ${device.mozillaVersion}'),
+                _InfoTile(label: 'Java', value: 'Versão ${device.javaVersion}'),
               ],
             ),
             const SizedBox(height: 16),
             _buildInfoCard(
               context,
               title: 'Programas Instalados',
-              icon: Icons.apps,
+              icon: Icons.list_alt,
               children: device.installedPrograms.isNotEmpty
                   ? device.installedPrograms.map((program) => _InfoTile(label: '', value: program, isProgram: true)).toList()
                   : [const _InfoTile(label: 'Nenhum programa encontrado', value: '')],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDeviceStatusChip(String status) {
+    Color color;
+    IconData icon;
+    
+    if (status.toLowerCase().contains('conectado') || status.toLowerCase().contains('online')) {
+      color = Colors.green;
+      icon = Icons.check_circle;
+    } else if (status.toLowerCase().contains('detectado')) {
+      color = Colors.orange;
+      icon = Icons.warning;
+    } else if (status.toLowerCase().contains('não detectado') || status == 'N/A') {
+      color = Colors.red;
+      icon = Icons.cancel;
+    } else {
+      color = Colors.grey;
+      icon = Icons.help;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            status,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -105,7 +169,15 @@ class _InfoTile extends StatelessWidget {
     if (isProgram) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 4.0),
-        child: Text(value ?? '', style: Theme.of(context).textTheme.bodyMedium),
+        child: Row(
+          children: [
+            const Icon(Icons.circle, size: 6, color: Colors.grey),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(value ?? '', style: Theme.of(context).textTheme.bodyMedium),
+            ),
+          ],
+        ),
       );
     }
 
@@ -115,7 +187,7 @@ class _InfoTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 150,
+            width: 180,
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),

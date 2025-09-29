@@ -1,5 +1,5 @@
 // Ficheiro: lib/screens/device_list_screen.dart
-// DESCRIÇÃO: Adicionada a coluna "Tipo de Totem" na tabela de dispositivos.
+// DESCRIÇÃO: Tabela ajustada para expandir e ocupar 100% da largura disponível na tela, eliminando espaços laterais.
 
 import 'dart:async';
 
@@ -22,6 +22,8 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
   final ApiService apiService = ApiService();
   Future<List<Device>>? _devicesFuture;
   Timer? _timer;
+  String _searchQuery = '';
+  String _filterStatus = 'Todos';
 
   @override
   void initState() {
@@ -54,12 +56,44 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
     _loadDevices();
   }
 
+  void _navigateToDetail(Device device) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DeviceDetailScreen(device: device),
+      ),
+    );
+  }
+
+  List<Device> _filterDevices(List<Device> devices) {
+    return devices.where((device) {
+      final matchesSearch = device.hostname.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          device.location.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          device.ip.toLowerCase().contains(_searchQuery.toLowerCase());
+
+      final matchesFilter = _filterStatus == 'Todos' || device.status == _filterStatus;
+
+      return matchesSearch && matchesFilter;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Painel de Monitoramento'),
+        title: const Row(
+          children: [
+            Icon(Icons.dashboard_customize_outlined),
+            SizedBox(width: 8),
+            Text('Painel de Monitoramento'),
+          ],
+        ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_outlined),
+            onPressed: _loadDevices,
+            tooltip: 'Atualizar',
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: _navigateToSettings,
@@ -82,16 +116,20 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
               return _buildErrorWidget('Nenhum dispositivo encontrado.');
             }
 
-            final devices = snapshot.data!;
+            final allDevices = snapshot.data!;
+            final filteredDevices = _filterDevices(allDevices);
+
             return SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSummaryCards(devices),
+                  _buildSummaryCards(allDevices),
                   const SizedBox(height: 24),
-                  _buildDeviceTableCard(devices),
+                  _buildSearchAndFilter(),
+                  const SizedBox(height: 16),
+                  _buildDeviceDataTable(filteredDevices),
                 ],
               ),
             );
@@ -101,6 +139,172 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
     );
   }
 
+  Widget _buildSearchAndFilter() {
+    return Card(
+      margin: const EdgeInsets.all(0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              decoration: InputDecoration(
+                hintText: 'Pesquisar por hostname, localização ou IP...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                _FilterChip(
+                  label: 'Todos',
+                  isSelected: _filterStatus == 'Todos',
+                  onSelected: () => setState(() => _filterStatus = 'Todos'),
+                ),
+                _FilterChip(
+                  label: 'Online',
+                  isSelected: _filterStatus == 'Online',
+                  color: Colors.green,
+                  onSelected: () => setState(() => _filterStatus = 'Online'),
+                ),
+                _FilterChip(
+                  label: 'Offline',
+                  isSelected: _filterStatus == 'Offline',
+                  color: Colors.orange,
+                  onSelected: () => setState(() => _filterStatus = 'Offline'),
+                ),
+                _FilterChip(
+                  label: 'Erro',
+                  isSelected: _filterStatus == 'Erro',
+                  color: Colors.red,
+                  onSelected: () => setState(() => _filterStatus = 'Erro'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeviceDataTable(List<Device> devices) {
+    if (devices.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Center(
+            child: Column(
+              children: [
+                Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  'Nenhum dispositivo encontrado para os filtros aplicados.',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias, // Adicionado para garantir que o conteúdo respeite as bordas do Card
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: constraints.maxWidth),
+              child: DataTable(
+                dataRowHeight: 60,
+                columnSpacing: 40,
+                headingTextStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+                columns: const [
+                  DataColumn(label: Text('Dispositivo')),
+                  DataColumn(label: Text('Status')),
+                  DataColumn(label: Text('IP')),
+                  DataColumn(label: Text('Tipo')),
+                  DataColumn(label: Text('Periféricos')),
+                  DataColumn(label: Text('Software')),
+                  DataColumn(label: Text('Última Sinc.')),
+                ],
+                rows: devices.map((device) {
+                  return DataRow(
+                    onSelectChanged: (_) => _navigateToDetail(device),
+                    cells: [
+                      DataCell(_buildDeviceHostCell(device)),
+                      DataCell(StatusIndicator(status: device.status)),
+                      DataCell(Text(device.ip)),
+                      DataCell(Text(device.totemType)),
+                      DataCell(_buildPeripheralsCell(device)),
+                      DataCell(_buildSoftwareCell(device)),
+                      DataCell(Text(DateFormat('dd/MM HH:mm').format(device.lastSeen))),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDeviceHostCell(Device device) {
+    return Row(
+      children: [
+        Icon(Icons.computer, color: Theme.of(context).primaryColor, size: 20),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(device.hostname, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(device.location, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPeripheralsCell(Device device) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _DeviceStatusBadge(icon: Icons.local_printshop, label: 'Zebra', status: device.zebraStatus),
+        const SizedBox(width: 6),
+        _DeviceStatusBadge(icon: Icons.print, label: 'Bematech', status: device.bematechStatus),
+        const SizedBox(width: 6),
+        _DeviceStatusBadge(icon: Icons.fingerprint, label: 'Biométrico', status: device.biometricReaderStatus),
+      ],
+    );
+  }
+  
+  Widget _buildSoftwareCell(Device device) {
+      return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+               _SoftwareBadge(icon: Icons.language, label: 'Firefox', version: device.mozillaVersion, color: Colors.orange),
+               const SizedBox(width: 6),
+               _SoftwareBadge(icon: Icons.coffee, label: 'Java', version: device.javaVersion, color: Colors.blueGrey),
+          ],
+      );
+  }
+
+
   Widget _buildErrorWidget(String message) {
     return Center(
       child: Padding(
@@ -108,7 +312,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.cloud_off, color: Colors.grey, size: 60),
+            Icon(Icons.cloud_off, color: Colors.grey[400], size: 64),
             const SizedBox(height: 16),
             Text(
               'Erro ao Carregar Dados',
@@ -119,7 +323,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
             Text(
               message.replaceAll("Exception: ", ""),
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -146,11 +350,11 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
             crossAxisCount: 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 1.8,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.5,
             children: [
-              _SummaryCard(title: 'Total', count: total, icon: Icons.important_devices, color: Colors.blue),
+              _SummaryCard(title: 'Total', count: total, icon: Icons.devices, color: Colors.blue),
               _SummaryCard(title: 'Online', count: online, icon: Icons.check_circle, color: Colors.green),
               _SummaryCard(title: 'Offline', count: offline, icon: Icons.error, color: Colors.orange),
               _SummaryCard(title: 'Com Erro', count: error, icon: Icons.warning, color: Colors.red),
@@ -159,7 +363,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
         } else {
           return Row(
             children: [
-              Expanded(child: _SummaryCard(title: 'Total de Dispositivos', count: total, icon: Icons.important_devices, color: Colors.blue)),
+              Expanded(child: _SummaryCard(title: 'Total', count: total, icon: Icons.devices, color: Colors.blue)),
               const SizedBox(width: 16),
               Expanded(child: _SummaryCard(title: 'Online', count: online, icon: Icons.check_circle, color: Colors.green)),
               const SizedBox(width: 16),
@@ -172,76 +376,138 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
       },
     );
   }
+}
 
-  Widget _buildDeviceTableCard(List<Device> devices) {
-    return Card(
-      margin: const EdgeInsets.all(0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final Color? color;
+  final VoidCallback onSelected;
+
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    this.color,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => onSelected(),
+      backgroundColor: Colors.grey[100],
+      selectedColor: (color ?? Theme.of(context).primaryColor).withOpacity(0.2),
+      checkmarkColor: color ?? Theme.of(context).primaryColor,
+      labelStyle: TextStyle(
+        color: isSelected ? (color ?? Theme.of(context).primaryColor) : Colors.grey[700],
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+    );
+  }
+}
+
+class _DeviceStatusBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String status;
+
+  const _DeviceStatusBadge({
+    required this.icon,
+    required this.label,
+    required this.status,
+  });
+
+  Color _getStatusColor() {
+    if (status.toLowerCase().contains('conectado') || status.toLowerCase().contains('online')) {
+      return Colors.green;
+    } else if (status.toLowerCase().contains('detectado')) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
+    }
+  }
+
+  IconData _getStatusIcon() {
+    if (status.toLowerCase().contains('conectado') || status.toLowerCase().contains('online')) {
+      return Icons.check_circle;
+    } else if (status.toLowerCase().contains('detectado')) {
+      return Icons.warning;
+    } else {
+      return Icons.cancel;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _getStatusColor();
+    final statusIcon = _getStatusIcon();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+          ),
+          const SizedBox(width: 4),
+          Icon(statusIcon, size: 12, color: color),
+        ],
+      ),
+    );
+  }
+}
+
+class _SoftwareBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String version;
+  final Color color;
+
+  const _SoftwareBadge({
+    required this.icon,
+    required this.label,
+    required this.version,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isInstalled = version != 'N/A';
+    final displayColor = isInstalled ? color : Colors.grey;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: displayColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: displayColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: displayColor),
+          ),
+          if (isInstalled) ...[
+            const SizedBox(width: 4),
             Text(
-              'Dispositivos Gerenciados (${devices.length})',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                    child: DataTable(
-                      columnSpacing: 20,
-                      horizontalMargin: 12.0,
-                      columns: const [
-                        DataColumn(label: Text('Dispositivo', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Unidade', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('IP', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Tipo de Totem', style: TextStyle(fontWeight: FontWeight.bold))), // NOVA COLUNA
-                        DataColumn(label: Text('Zebra', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Bematech', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Leitor Biométrico', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Firefox', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Java', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Última Sincronização', style: TextStyle(fontWeight: FontWeight.bold))),
-                      ],
-                      rows: devices.map((device) {
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(device.hostname)),
-                            DataCell(Text(device.location)),
-                            DataCell(Text(device.ip)),
-                            DataCell(Text(device.totemType)), // NOVA CÉLULA COM O TIPO DE TOTEM
-                            DataCell(Text(device.zebraStatus)),
-                            DataCell(Text(device.bematechStatus)),
-                            DataCell(Text(device.biometricReaderStatus)),
-                            DataCell(Text(device.mozillaVersion)),
-                            DataCell(Text(device.javaVersion)),
-                            DataCell(StatusIndicator(status: device.status)),
-                            DataCell(Text(DateFormat('dd/MM/yyyy HH:mm').format(device.lastSeen))),
-                          ],
-                          onSelectChanged: (isSelected) {
-                            if (isSelected != null && isSelected) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => DeviceDetailScreen(device: device),
-                                ),
-                              );
-                            }
-                          },
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                );
-              },
+              version,
+              style: TextStyle(fontSize: 10, color: displayColor),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -273,17 +539,30 @@ class _SummaryCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.black54),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: color, size: 24),
                 ),
-                Icon(icon, color: color, size: 28),
+                Text(
+                  count.toString(),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
-              count.toString(),
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
+              title,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
             ),
           ],
         ),

@@ -1,5 +1,5 @@
 // Ficheiro: lib/models/device.dart
-// DESCRIÇÃO: Adicionadas as variáveis ram, hdType e hdStorage que vêm do servidor.
+// DESCRIÇÃO: Corrigido para usar os campos zebraStatus e bematechStatus do servidor
 
 class Device {
   final String id;
@@ -15,10 +15,11 @@ class Device {
   final String status;
   final String biometricReaderStatus;
   final String totemType;
-  final String ram; // NOVO
-  final String hdType; // NOVO
-  final String hdStorage; // NOVO
-
+  final String ram;
+  final String hdType;
+  final String hdStorage;
+  final String zebraStatus; // NOVO - vem direto do servidor
+  final String bematechStatus; // NOVO - vem direto do servidor
 
   Device({
     required this.id,
@@ -34,9 +35,11 @@ class Device {
     required this.status,
     required this.biometricReaderStatus,
     required this.totemType,
-    required this.ram, // NOVO
-    required this.hdType, // NOVO
-    required this.hdStorage, // NOVO
+    required this.ram,
+    required this.hdType,
+    required this.hdStorage,
+    required this.zebraStatus,
+    required this.bematechStatus,
   });
 
   factory Device.fromJson(Map<String, dynamic> json) {
@@ -53,14 +56,15 @@ class Device {
       location: json['location'] ?? 'Desconhecida',
       installedPrograms: List<String>.from(json['installedPrograms'] ?? []),
       printerStatus: json['printerStatus'] ?? 'N/A',
-      // A CORREÇÃO ESTÁ AQUI: Garante que a data seja convertida para o fuso horário local.
       lastSeen: parsedDate.toLocal(),
       status: json['status'] ?? 'Offline',
       biometricReaderStatus: json['biometricReaderStatus'] ?? 'N/A',
       totemType: json['totemType'] ?? 'N/A',
-      ram: json['ram'] ?? 'N/A', // NOVO
-      hdType: json['hdType'] ?? 'N/A', // NOVO
-      hdStorage: json['hdStorage'] ?? 'N/A', // NOVO
+      ram: json['ram'] ?? 'N/A',
+      hdType: json['hdType'] ?? 'N/A',
+      hdStorage: json['hdStorage'] ?? 'N/A',
+      zebraStatus: json['zebraStatus'] ?? 'Não detectado', // CORRIGIDO
+      bematechStatus: json['bematechStatus'] ?? 'Não detectado', // CORRIGIDO
     );
   }
 
@@ -77,7 +81,7 @@ class Device {
   }
 
   // Função para extrair a versão do Java
-   String get javaVersion {
+  String get javaVersion {
     final patterns = [
       RegExp(r'Java.*? ([\d\._]+)'),
       RegExp(r'OpenJDK.*? ([\d\._]+)'),
@@ -93,39 +97,4 @@ class Device {
     }
     return 'N/A';
   }
-
-  // Lógica para extrair o status de uma impressora específica
-  String _getPrinterStatusByName(String printerName) {
-    if (printerStatus == 'N/A') return 'N/A';
-
-    // Divide o texto bruto em linhas
-    final lines = printerStatus.split('\n');
-    
-    // Encontra a primeira linha que contém o nome da impressora
-    final printerLine = lines.firstWhere(
-      (line) => line.toLowerCase().contains(printerName.toLowerCase()),
-      orElse: () => '', // Retorna uma string vazia se não encontrar
-    );
-
-    if (printerLine.isEmpty) {
-      return 'N/A'; // Impressora não encontrada
-    }
-
-    // Verifica por palavras-chave de status na linha encontrada
-    if (printerLine.toLowerCase().contains('error')) {
-      return 'Erro';
-    }
-    if (printerLine.toLowerCase().contains('offline')) {
-      return 'Offline';
-    }
-    
-    // Se a impressora foi encontrada e não tem status de erro/offline, assume-se que está online
-    return 'Online';
-  }
-
-  // Getter para o status da impressora Zebra
-  String get zebraStatus => _getPrinterStatusByName('zebra');
-
-  // Getter para o status da impressora Bematech
-  String get bematechStatus => _getPrinterStatusByName('bematech');
 }
